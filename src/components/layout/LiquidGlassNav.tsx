@@ -1,6 +1,7 @@
 import {
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react"
@@ -24,6 +25,9 @@ const navItems = [
   { label: "Fragrance", href: "#fragrance" },
 ]
 
+const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)"
+const TOUCH_ONLY_QUERY = "(hover: none) and (pointer: coarse)"
+
 export function LiquidGlassNav({ onCartOpen }: LiquidGlassNavProps) {
   const [menuOpen, setMenuOpen] = useState(false)
   const itemCount = useCartStore((s) => s.itemCount())
@@ -38,6 +42,15 @@ export function LiquidGlassNav({ onCartOpen }: LiquidGlassNavProps) {
   const closeBtnRef = useRef<HTMLButtonElement>(null)
   const menuTlRef = useRef<gsap.core.Timeline | null>(null)
   const navHeightRef = useRef(0)
+
+  const reducedMotion = useMemo(
+    () => window.matchMedia(REDUCED_MOTION_QUERY).matches,
+    [],
+  )
+  const isTouchOnly = useMemo(
+    () => window.matchMedia(TOUCH_ONLY_QUERY).matches,
+    [],
+  )
 
   useGlassTextContrast(glassRef, menuOpen)
 
@@ -128,7 +141,61 @@ export function LiquidGlassNav({ onCartOpen }: LiquidGlassNavProps) {
     [],
   )
 
+  const hardResetMenu = useCallback(() => {
+    if (menuTlRef.current) {
+      menuTlRef.current.kill()
+      menuTlRef.current = null
+    }
+
+    const els = [
+      glassRef.current,
+      menuOverlayRef.current,
+      closeBtnRef.current,
+      menuPanelRef.current,
+    ]
+
+    els.forEach((el) => {
+      if (el) gsap.set(el, { clearProps: "all" })
+    })
+
+    const items = menuItemsRef.current
+    if (items) {
+      Array.from(items.children).forEach((child) => {
+        gsap.set(child, { clearProps: "all" })
+      })
+    }
+
+    const glass = glassRef.current
+    if (glass) {
+      glass.style.removeProperty("height")
+      glass.style.removeProperty("border-radius")
+      glass.style.removeProperty("transform")
+      glass.style.removeProperty("opacity")
+      glass.style.removeProperty("filter")
+    }
+
+    const overlay = menuOverlayRef.current
+    if (overlay) {
+      overlay.style.display = "none"
+      overlay.style.removeProperty("opacity")
+    }
+
+    const panel = menuPanelRef.current
+    if (panel) {
+      panel.style.display = "none"
+    }
+
+    const closeBtn = closeBtnRef.current
+    if (closeBtn) {
+      closeBtn.style.removeProperty("opacity")
+    }
+
+    setMenuOpen(false)
+  }, [])
+
   const openMobileMenu = useCallback(() => {
+    hardResetMenu()
+
     const glass = glassRef.current
     const overlay = menuOverlayRef.current
     const items = menuItemsRef.current
@@ -138,7 +205,19 @@ export function LiquidGlassNav({ onCartOpen }: LiquidGlassNavProps) {
     navHeightRef.current = glass.offsetHeight
     setMenuOpen(true)
 
-    const targetHeight = Math.min(window.innerHeight * 0.72, 460)
+    if (reducedMotion) {
+      const targetHeight = Math.min(window.innerHeight * 0.72, 460)
+      overlay.style.display = "block"
+      overlay.style.opacity = "1"
+      glass.style.borderRadius = "24px"
+      glass.style.height = `${targetHeight}px`
+      closeBtn.style.opacity = "1"
+      Array.from(items.children).forEach((child) => {
+        ;(child as HTMLElement).style.opacity = "1"
+        ;(child as HTMLElement).style.transform = "translateY(0)"
+      })
+      return
+    }
 
     if (menuTlRef.current) menuTlRef.current.kill()
     const tl = gsap.timeline()
@@ -150,7 +229,7 @@ export function LiquidGlassNav({ onCartOpen }: LiquidGlassNavProps) {
     tl.to(
       glass,
       {
-        height: targetHeight,
+        height: Math.min(window.innerHeight * 0.72, 460),
         duration: 0.16,
         ease: "power4.out",
       },
@@ -194,7 +273,7 @@ export function LiquidGlassNav({ onCartOpen }: LiquidGlassNavProps) {
     )
 
     tl.play()
-  }, [])
+  }, [hardResetMenu, reducedMotion])
 
   const closeMobileMenu = useCallback(() => {
     const glass = glassRef.current
@@ -203,9 +282,14 @@ export function LiquidGlassNav({ onCartOpen }: LiquidGlassNavProps) {
     const closeBtn = closeBtnRef.current
     if (!glass || !overlay || !items || !closeBtn) return
 
+    if (reducedMotion) {
+      hardResetMenu()
+      return
+    }
+
     if (menuTlRef.current) menuTlRef.current.kill()
     const tl = gsap.timeline({
-      onComplete: () => setMenuOpen(false),
+      onComplete: hardResetMenu,
     })
     menuTlRef.current = tl
 
@@ -256,9 +340,17 @@ export function LiquidGlassNav({ onCartOpen }: LiquidGlassNavProps) {
     tl.set(overlay, { display: "none" })
 
     tl.play()
-  }, [])
+  }, [hardResetMenu, reducedMotion])
 
   useEffect(() => {
+    return () => {
+      hardResetMenu()
+    }
+  }, [hardResetMenu])
+
+  useEffect(() => {
+    if (isTouchOnly) return
+
     const handleGlobalMove = (e: MouseEvent) => {
       const glass = glassRef.current
       if (!glass) return
@@ -274,7 +366,7 @@ export function LiquidGlassNav({ onCartOpen }: LiquidGlassNavProps) {
     }
     window.addEventListener("mousemove", handleGlobalMove)
     return () => window.removeEventListener("mousemove", handleGlobalMove)
-  }, [updateMouseFromEvent])
+  }, [updateMouseFromEvent, isTouchOnly])
 
   return (
     <>
@@ -282,7 +374,7 @@ export function LiquidGlassNav({ onCartOpen }: LiquidGlassNavProps) {
         <div className="mx-3 mt-3 sm:mx-4 sm:mt-4">
           <div
             ref={glassRef}
-            className="liquid-glass-container liquid-glass-edge liquid-glass-iridescent-edge glass-text relative rounded-full"
+            className="liquid-glass-container liquid-glass-edge liquid-glass-iridescent-edge glass-text relative rounded-full touch-manipulation"
             onMouseMove={handleMouseMove}
             onMouseLeave={handleMouseLeave}
           >
@@ -370,19 +462,21 @@ export function LiquidGlassNav({ onCartOpen }: LiquidGlassNavProps) {
               className="relative z-10"
               style={{ display: menuOpen ? "block" : "none" }}
             >
-              <button
-                ref={closeBtnRef}
-                onClick={closeMobileMenu}
-                className="absolute right-4 top-3 flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-white/10 bg-white/5 backdrop-blur-md transition-colors hover:bg-white/10"
-                aria-label="Close menu"
-                style={{ opacity: 0 }}
-              >
-                <X size={16} />
-              </button>
+              <div className="flex items-center justify-end px-4 pb-2 pt-4">
+                <button
+                  ref={closeBtnRef}
+                  onClick={closeMobileMenu}
+                  className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-white/10 bg-white/5 backdrop-blur-md transition-colors hover:bg-white/10"
+                  aria-label="Close menu"
+                  style={{ opacity: 0 }}
+                >
+                  <X size={16} />
+                </button>
+              </div>
 
               <div
                 ref={menuItemsRef}
-                className="flex flex-col gap-1 px-5 pb-6 pt-2"
+                className="flex flex-col gap-1 px-5 pb-6"
               >
                 {navItems.map((item) => (
                   <a
@@ -409,7 +503,10 @@ export function LiquidGlassNav({ onCartOpen }: LiquidGlassNavProps) {
                 ))}
               </div>
 
-              <div className="px-5 pb-5 text-xs opacity-30">
+              <div
+                className="px-5 pb-5 text-xs opacity-30"
+                style={{ paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom, 0px))" }}
+              >
                 Luxora — Luxury Ecommerce
               </div>
             </div>
