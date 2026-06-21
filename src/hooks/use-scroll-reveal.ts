@@ -1,0 +1,76 @@
+import { useEffect, useRef } from 'react'
+import gsap from 'gsap'
+import { ScrollTrigger } from 'gsap/ScrollTrigger'
+
+gsap.registerPlugin(ScrollTrigger)
+
+interface ScrollRevealOptions {
+  from?: gsap.TweenVars
+  to?: gsap.TweenVars
+  scrub?: boolean | number
+  markers?: boolean
+  start?: string
+  end?: string
+  toggleActions?: string
+}
+
+export function useScrollReveal<T extends HTMLElement>(
+  options: ScrollRevealOptions = {},
+) {
+  const ref = useRef<T>(null)
+
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+
+    const ctx = gsap.context(() => {
+      gsap.fromTo(
+        el,
+        options.from ?? { y: 60, opacity: 0 },
+        {
+          ...options.to,
+          scrollTrigger: {
+            trigger: el,
+            start: options.start ?? 'top 85%',
+            end: options.end ?? 'top 40%',
+            scrub: options.scrub ?? false,
+            toggleActions: options.toggleActions ?? 'play none none reverse',
+            markers: options.markers ?? false,
+          },
+        },
+      )
+    })
+
+    return () => ctx.revert()
+  }, [])
+
+  return ref
+}
+
+export function useCinematicParallax<T extends HTMLElement>(
+  speed: number = 0.3,
+) {
+  const ref = useRef<T>(null)
+
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+
+    const ctx = gsap.context(() => {
+      gsap.to(el, {
+        y: `${speed * 100}%`,
+        ease: 'none',
+        scrollTrigger: {
+          trigger: el.parentElement,
+          start: 'top bottom',
+          end: 'bottom top',
+          scrub: true,
+        },
+      })
+    })
+
+    return () => ctx.revert()
+  }, [speed])
+
+  return ref
+}
