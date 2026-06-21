@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { Navbar } from "@/components/layout/Navbar"
+import { LiquidGlassNav } from "@/components/layout/LiquidGlassNav"
 import { Footer } from "@/components/layout/Footer"
 import { Home } from "@/pages/Home"
 import { CartDrawer } from "@/components/ecommerce/CartDrawer"
@@ -9,7 +9,7 @@ export default function App() {
 
   return (
     <div className="flex min-h-screen flex-col">
-      <Navbar onCartOpen={() => setCartOpen(true)} />
+      <LiquidGlassNav onCartOpen={() => setCartOpen(true)} />
       <main className="flex-1">
         <Home />
       </main>
