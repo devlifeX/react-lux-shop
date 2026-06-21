@@ -1,5 +1,5 @@
 import { FloatingHero } from "@/components/ecommerce/FloatingHero"
-import { FeaturedCarousel } from "@/components/ecommerce/FeaturedCarousel"
+import { CinematicShowcase } from "@/components/ecommerce/cinematic/CinematicShowcase"
 import { CategoryBento } from "@/components/ecommerce/CategoryBento"
 import { ProductGrid } from "@/components/ecommerce/ProductGrid"
 import { ProductShowcase } from "@/components/ecommerce/ProductShowcase"
@@ -12,7 +12,7 @@ export function Home() {
   return (
     <>
       <FloatingHero />
-      <FeaturedCarousel />
+      <CinematicShowcase />
       <CategoryBento />
       <ProductGrid />
       <ProductShowcase />
