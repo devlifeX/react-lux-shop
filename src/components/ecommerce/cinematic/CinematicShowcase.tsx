@@ -40,7 +40,6 @@ export function CinematicShowcase() {
   const particleRef = useRef<ParticleTransitionHandle>(null)
 
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null)
-  const [prevActive, setPrevActive] = useState(0)
   const [entered, setEntered] = useState(false)
 
   const addItem = useCartStore((s) => s.addItem)
@@ -55,17 +54,16 @@ export function CinematicShowcase() {
   const cardHeight = isMobile ? 360 : isTablet ? 420 : 480
   const cardSpacing = isMobile ? 200 : isTablet ? 270 : 320
 
-  const handleSettle = useCallback(
-    (index: number) => {
-      cardRefs.current.forEach((cardRef, i) => {
-        if (!cardRef) return
-        if (i === index) {
-          cardRef.playEntrance()
-        }
-      })
-    },
-    [],
-  )
+  const handleSettle = useCallback((index: number) => {
+    const stage = stageRef.current
+    const particle = particleRef.current
+    if (stage && particle) {
+      const rect = stage.getBoundingClientRect()
+      particle.burst(rect.width / 2, rect.height / 2)
+    }
+    cardRefs.current[index]?.resetContent()
+    cardRefs.current[index]?.playEntrance()
+  }, [])
 
   const carousel = useCinematicCarousel({
     count,
@@ -73,41 +71,6 @@ export function CinematicShowcase() {
     wheelThreshold: 50,
     onSettle: handleSettle,
   })
-
-  useEffect(() => {
-    cardRefs.current.forEach((ref, i) => {
-      if (i === carousel.activeIndex && ref) {
-        ref.resetContent()
-      }
-    })
-  }, [carousel.activeIndex])
-
-  const handleTransitionStart = useCallback(
-    (newActive: number) => {
-      if (newActive === prevActive) return
-      setPrevActive(newActive)
-
-      const stage = stageRef.current
-      const particle = particleRef.current
-      if (!stage || !particle) return
-
-      const rect = stage.getBoundingClientRect()
-      particle.burst(rect.width / 2, rect.height / 2)
-
-      cardRefs.current.forEach((ref, i) => {
-        if (i === newActive && ref) {
-          ref.resetContent()
-        }
-      })
-    },
-    [prevActive],
-  )
-
-  useEffect(() => {
-    if (carousel.isTransitioning) {
-      handleTransitionStart(carousel.activeIndex)
-    }
-  }, [carousel.isTransitioning, carousel.activeIndex, handleTransitionStart])
 
   useEffect(() => {
     const ctx = gsap.context(() => {
