@@ -307,9 +307,14 @@ export function FloatingHero() {
 
   useEffect(() => {
     const ctx = gsap.context(() => {
-      const titleTl = gsap.timeline()
-      titleTl.fromTo(titleRef.current, { opacity: 0, y: 40, scale: 0.95 }, { opacity: 1, y: 0, scale: 1, duration: 1.5, ease: 'power3.out' }, 1)
-        .fromTo(subtitleRef.current, { opacity: 0, y: 20 }, { opacity: 0.6, y: 0, duration: 1.2, ease: 'power3.out' }, '-=0.8')
+      if (titleRef.current) {
+        gsap.set(titleRef.current, { opacity: 0, y: 40, scale: 0.95 })
+        gsap.to(titleRef.current, { opacity: 1, y: 0, scale: 1, duration: 1.5, ease: 'power3.out', delay: 1 })
+      }
+      if (subtitleRef.current) {
+        gsap.set(subtitleRef.current, { opacity: 0, y: 20 })
+        gsap.to(subtitleRef.current, { opacity: 0.6, y: 0, duration: 1.2, ease: 'power3.out', delay: 1.8 })
+      }
 
       startFloating()
     })
@@ -510,7 +515,6 @@ export function FloatingHero() {
       <div
         ref={titleRef}
         className="pointer-events-none relative z-10 text-center"
-        style={{ opacity: 0 }}
       >
         <h1 className="font-heading text-5xl font-bold tracking-tight text-white md:text-7xl lg:text-8xl">
           Luxury<br /><span className="text-accent">Redefined</span>
@@ -518,7 +522,6 @@ export function FloatingHero() {
         <p
           ref={subtitleRef}
           className="mx-auto mt-4 max-w-md text-sm text-white/60 md:text-base"
-          style={{ opacity: 0 }}
         >
           Timeless craftsmanship meets celestial design.
         </p>

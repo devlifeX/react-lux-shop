@@ -18,30 +18,46 @@ export function useScrollReveal<T extends HTMLElement>(
   options: ScrollRevealOptions = {},
 ) {
   const ref = useRef<T>(null)
+  const revealed = useRef(false)
 
   useEffect(() => {
     const el = ref.current
     if (!el) return
 
+    const fromVars = options.from ?? { y: 60, opacity: 0 }
+    const toVars = { opacity: 1, y: 0, ...options.to }
+
     const ctx = gsap.context(() => {
-      gsap.fromTo(
-        el,
-        options.from ?? { y: 60, opacity: 0 },
-        {
-          ...options.to,
-          scrollTrigger: {
-            trigger: el,
-            start: options.start ?? 'top 85%',
-            end: options.end ?? 'top 40%',
-            scrub: options.scrub ?? false,
-            toggleActions: options.toggleActions ?? 'play none none reverse',
-            markers: options.markers ?? false,
-          },
+      const tween = gsap.fromTo(el, fromVars, {
+        ...toVars,
+        scrollTrigger: {
+          trigger: el,
+          start: options.start ?? 'top 85%',
+          end: options.end ?? 'top 40%',
+          scrub: options.scrub ?? false,
+          toggleActions: options.toggleActions ?? 'play none none reverse',
+          markers: options.markers ?? false,
+          onEnter: () => { revealed.current = true },
         },
-      )
+      })
+
+      tween.eventCallback('onComplete', () => { revealed.current = true })
     })
 
-    return () => ctx.revert()
+    ScrollTrigger.refresh()
+
+    const safety = setTimeout(() => {
+      if (!revealed.current) {
+        el.style.opacity = '1'
+        el.style.transform = 'translateY(0)'
+        revealed.current = true
+      }
+    }, 3000)
+
+    return () => {
+      clearTimeout(safety)
+      ctx.revert()
+    }
   }, [])
 
   return ref
